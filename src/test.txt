@@ -1,13 +1,5 @@
-name = "Ben"
-age = 21
-sum = 4 + 5
-product = 4 * 5
-
-print>> 1
-print>> name
-print>> age
-print>> sum
-print>> product
-print>> 1 + 2
-print>> 5 * 5
-print>> "boo"
+a = 2.2
+b = 1.1
+c = a + b
+print>> 2.2 + 1.1
+print>> c
