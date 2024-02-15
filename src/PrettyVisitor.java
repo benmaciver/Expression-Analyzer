@@ -4,16 +4,23 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
 
     @Override
     public String visitProgram(exprParser.ProgramContext ctx) {
-        //return visit(ctx.statement());
-        return ctx.statement(0) == null ? "" : "[ " + this.visitStatement(ctx.statement(0)) + " ]";
+        StringBuilder builder = new StringBuilder();
+        for (exprParser.StatementContext statementContext : ctx.statement()) {
+            builder.append(this.visitStatement(statementContext)).append("\n");
+        }
+        return builder.toString();
     }
 
     @Override
     public String visitStatement(exprParser.StatementContext ctx) {
         if (ctx.assignment() != null) {
-            return visit(ctx.assignment());
+            return visitAssignment(ctx.assignment());
+        } else if (ctx.print() != null) {
+            return visitPrint(ctx.print());
+        } else if (ctx.control_statement() != null) {
+            return visitControl_statement(ctx.control_statement());
         } else {
-            return visit(ctx.print());
+            return "";
         }
     }
 
@@ -40,14 +47,13 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
             return "print>> " + visit(ctx.arithmetic());
         } else if (ctx.operation() != null) {
             return "print>> " + visit(ctx.operation());
-        } else if (ctx.VARIABLE() != null) {
-            return "print>> " + ctx.VARIABLE().getText();
         } else if (ctx.STRING() != null) {
             return "print>> " + ctx.STRING().getText();
         } else {
             return "print>> null";
         }
     }
+
     @Override
     public String visitArithmetic(exprParser.ArithmeticContext ctx) {
         StringBuilder builder = new StringBuilder();
@@ -81,5 +87,42 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         } else {
             return ctx.VARIABLE().getText();
         }
+    }
+
+    @Override
+    public String visitControl_statement(exprParser.Control_statementContext ctx) {
+        if (ctx.while_loop() != null) {
+            return visitWhile_loop(ctx.while_loop());
+        } else if (ctx.if_statemnt() != null) {
+            return visitIf_statemnt(ctx.if_statemnt());
+        } else if (ctx.for_loop() != null) {
+            return visitFor_loop(ctx.for_loop());
+        } else {
+            return "";
+        }
+    }
+
+    @Override
+    public String visitWhile_loop(exprParser.While_loopContext ctx) {
+        return "while " + ctx.boolean_().getText();
+    }
+
+    @Override
+    public String visitIf_statemnt(exprParser.If_statemntContext ctx) {
+        return "if " + ctx.boolean_().getText();
+    }
+
+    @Override
+    public String visitFor_loop(exprParser.For_loopContext ctx) {
+        if (ctx.INT() == null) {
+            return "for " + ctx.VARIABLE(0) + " in " + ctx.VARIABLE(1);
+        }
+        else return "for " + ctx.VARIABLE(0) + " in " + ctx.INT();
+
+    }
+
+    @Override
+    public String visitBoolean(exprParser.BooleanContext ctx) {
+        return visit(ctx.value(0)) + " " + ctx.getChild(1).getText() + " " + visit(ctx.value(1));
     }
 }

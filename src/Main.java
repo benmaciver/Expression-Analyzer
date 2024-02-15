@@ -1,15 +1,22 @@
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class Main {
     private static ArrayList<Variable> variables = new ArrayList<>();
-
+    private static Boolean readNextLine;
+    private static Boolean lastLineWasIf;
     public static void main(String[] args) throws IOException {
+        readNextLine = true;
+        lastLineWasIf = false;
         BufferedReader reader = new BufferedReader(new FileReader("src/test.txt"));
         String line;
         while ((line = reader.readLine()) != null) {
@@ -17,23 +24,33 @@ public class Main {
             if (line.equals("")) {
                 continue;
             }
+
+            if (line.substring(0,3).equals("    ") && lastLineWasIf)
+                line = line.substring(4);
+            else {
+                lastLineWasIf = false;
+                if (line.substring(0,3).equals("    "))
+                    continue;
+            }
+            //System.out.println("Input: " + line);
             CharStream cs = CharStreams.fromString(line);
             exprLexer lexer = new exprLexer(cs);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             exprParser parser = new exprParser(tokens);
 
             String str = new PrettyVisitor().visit(parser.program());
+            //System.out.println(str);
             ExpressionEvaluator(str);
         }
     }
 
     private static void ExpressionEvaluator(String str) {
         ArrayList<String> splitStr = new ArrayList<>(Arrays.asList(str.split(" ")));
-        splitStr.remove(0);
-        splitStr.remove(splitStr.size() - 1);
 
         if (splitStr.get(0).equals("print>>")) {
             splitStr.remove(0);
+//            for (String s : splitStr)
+//                System.out.println(s);
             if (splitStr.size() == 1) {
                 int index = getVariable(splitStr.get(0));
                 if (index != -1) {
@@ -48,7 +65,18 @@ public class Main {
                 arithmeticExpression = SubstituteVariablesForValues(arithmeticExpression);
                 System.out.println(arithmeticExpressionEvaluator(arithmeticExpression));
             }
-        } else {
+        }
+        else if (splitStr.get(0).equals("if")){
+            //System.out.println(String.valueOf(splitStr));
+            splitStr.remove(0);
+            String expression = SubstituteVariablesForValues(String.join(" ", splitStr));
+            //System.out.println(expression);
+            //System.out.println(String.valueOf(splitStr));
+            if (!BooleanExpressionEvaluator(expression))
+                readNextLine = false;
+            else lastLineWasIf = true;
+        }
+        else {
             String varName = splitStr.get(0);
             Variable var;
             splitStr.remove(0);
@@ -84,6 +112,17 @@ public class Main {
             }
         }
     }
+//    private static ArrayList<String> SubstituteVariablesForValues(ArrayList<String> expression) {
+//        ArrayList<String> output = new ArrayList<>();
+//        for (String s : expression) {
+//            if (getVariable(s) != -1) {
+//                output.add(variables.get(getVariable(s)).getValue());
+//            } else
+//                output.add(s);
+//        }
+//
+//        return output;
+//    }
     private static String SubstituteVariablesForValues(String str) {
         for (int i = 0; i < variables.size(); i++) {
             str = str.replaceAll(variables.get(i).name, variables.get(i).getValue());
@@ -91,7 +130,48 @@ public class Main {
         return str;
     }
 
-    public static float arithmeticExpressionEvaluator(String expression) {
+    private static boolean BooleanExpressionEvaluator(String expression) {
+        int opIndex = -1;
+        for (int i= 0; i < expression.length(); i++) {
+            Character s = expression.charAt(i);
+            if (s == '>')
+            {opIndex = i; break;}
+            else if (s == '<')
+            {opIndex = i; break;}
+            else if (s == '=')
+            {opIndex = i; break;}
+            else if (s == '!')
+            {opIndex = i; break;}
+        }
+        if (opIndex == -1)
+            throw new IllegalArgumentException("Invalid boolean expression: " + expression);
+        float a = Float.parseFloat(expression.substring(0, opIndex));
+        float b;
+        try {
+            b = Float.parseFloat(expression.substring(opIndex + 1));
+        }
+        catch(Exception e)
+        {
+            b = Float.parseFloat(expression.substring(opIndex + 2));
+        }
+
+
+        if (expression.charAt(opIndex) == '>' && expression.charAt(opIndex + 1) == '=')
+            return a >= b;
+        else if (expression.charAt(opIndex) == '<' && expression.charAt(opIndex + 1) == '=')
+            return a <= b;
+        else if (expression.charAt(opIndex) == '='&& expression.charAt(opIndex + 1) == '=')
+            return a == b;
+        else if (expression.charAt(opIndex) == '!'&& expression.charAt(opIndex + 1) == '=')
+            return a != b;
+        else if (expression.charAt(opIndex) == '>')
+            return a > b;
+        else if (expression.charAt(opIndex) == '<')
+            return a < b;
+
+        else throw new IllegalArgumentException("Invalid boolean expression: " + expression);
+    }
+    private static float arithmeticExpressionEvaluator(String expression) {
         expression = expression.replaceAll(" ", "");
         Stack<Float> values = new Stack<>();
         Stack<Character> operators = new Stack<>();
@@ -198,7 +278,7 @@ public class Main {
         }
     }
 
-    public static int getVariable(String str) {
+    private static int getVariable(String str) {
         for (int i = 0; i < variables.size(); i++) {
             if (variables.get(i).name.equals(str)) {
                 return i;
