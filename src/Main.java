@@ -39,9 +39,75 @@ public class Main {
             exprParser parser = new exprParser(tokens);
 
             String str = new PrettyVisitor().visit(parser.program());
-            //System.out.println(str);
+            System.out.println(convertToLISP(str));
             ExpressionEvaluator(str);
         }
+    }
+    private static String convertToLISP(String line){
+        String[] parts = line.split(" ");
+        String output = "(";
+
+        if (parts[1].equals( "=")){
+            output+="= ";
+            output+=parts[0];
+            String[] value = Arrays.copyOfRange(parts, 2, parts.length);
+            String stringVersion = "";
+            for (String s : value) {
+                stringVersion+=" ";
+                stringVersion += s;
+            }
+            if (!ContainsOperator(stringVersion))
+                output+=stringVersion;
+            else{
+                output+=convertToLISP(stringVersion);
+            }
+
+            output = output.trim();
+            output+=")";
+
+        }
+        else {
+            Pair operator = findFirstOperator(parts);
+            if (operator!=null){
+                if (operator.value.equals("/")){
+                    output+="(/ ";
+                }
+                if (operator.value.equals("*")){
+
+                    if (!ContainsOperator(SubStringArray(parts, operator.index)))
+                    {
+                        
+                    }
+                }
+            }
+        }
+
+
+        return output;
+    } //IN THE MIDDLE OF WRITING THIS METHOD!!!
+
+    private static Boolean ContainsOperator(String str) {
+        return str.contains("+") || str.contains("-") || str.contains("*") || str.contains("/");
+    }
+    private static Boolean ContainsOperator(String[] arr) {
+        for (String s : arr) {
+            if (s.equals("+") || s.equals("-") || s.equals("*") || s.equals("/"))
+                return true;
+        }
+        return false;
+    }
+    private static String[] SubStringArray(String[] arr, int start, int end) {
+        return Arrays.copyOfRange(arr, start, end + 1);
+    }
+    private static String[] SubStringArray(String[] arr, int start) {
+        return Arrays.copyOfRange(arr, start, arr.length);
+    }
+    private static Pair findFirstOperator(String[] str){
+        for (int i = 0; i < str.length; i++) {
+            if (str[i].equals("+") || str[i].equals("-") || str[i].equals("*") || str[i].equals("/"))
+                return new Pair(i, str[i]);
+        }
+        return null;
     }
 
     private static void ExpressionEvaluator(String str) {
@@ -234,13 +300,53 @@ public class Main {
                 throw new IllegalArgumentException("Invalid operator: " + op);
         }
     }
+    private static int getVariable(String str) {
+        for (int i = 0; i < variables.size(); i++) {
+            if (variables.get(i).name.equals(str)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
+    private static Boolean isFloat(String num) {
+        try {
+            Float.parseFloat(num);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private static Boolean isInt(String num) {
+        try {
+            Integer.parseInt(num);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+    private static class Pair{
+        public int index;
+        public String value;
+
+        Pair(int index, String value){
+            this.index = index;
+            this.value = value;
+        }
+        public String toString(){
+            return "Index: " + index + " Value: " + value;
+        }
+
+    }
     private static class Variable {
         public String name;
         public String type;
         public String strValue;
         public int intValue;
         public float floatValue;
+
+
 
         Variable(String name, String value) {
             this.name = name;
@@ -278,30 +384,6 @@ public class Main {
         }
     }
 
-    private static int getVariable(String str) {
-        for (int i = 0; i < variables.size(); i++) {
-            if (variables.get(i).name.equals(str)) {
-                return i;
-            }
-        }
-        return -1;
-    }
 
-    private static Boolean isFloat(String num) {
-        try {
-            Float.parseFloat(num);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
 
-    private static Boolean isInt(String num) {
-        try {
-            Integer.parseInt(num);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
 }

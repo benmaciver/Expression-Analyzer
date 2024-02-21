@@ -1,5 +1,2 @@
 a = 3
-b = 3
-if 2 == 3
-    print>>"if_executed"
-print>>"end_of_program"
+b = "ben"
