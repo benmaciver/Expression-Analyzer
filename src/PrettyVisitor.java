@@ -1,6 +1,9 @@
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
+import java.util.Arrays;
+
 public class PrettyVisitor extends exprBaseVisitor<String> {
+    private String evaluateableCode = "";
 
     @Override
     public String visitProgram(exprParser.ProgramContext ctx) {
@@ -8,9 +11,12 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         for (exprParser.StatementContext statementContext : ctx.statement()) {
             builder.append(this.visitStatement(statementContext)).append("\n");
         }
-        return builder.toString();
+        evaluateableCode = builder.toString();
+        return convertToLISP(builder.toString()).strip();
     }
-
+    public String GetEvaluateableCode() {
+        return evaluateableCode.strip();
+    }
     @Override
     public String visitStatement(exprParser.StatementContext ctx) {
         if (ctx.assignment() != null) {
@@ -110,5 +116,254 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
     @Override
     public String visitBoolean(exprParser.BooleanContext ctx) {
         return visit(ctx.value(0)) + " " + ctx.getChild(1).getText() + " " + visit(ctx.value(1));
+    }
+    private String convertToLISP(String line){
+        String[] parts = line.split(" ");
+        String partsMerged = String.join("", parts);
+        String output = "(";
+        if (parts[1].equals( "=")){
+            output+="= ";
+            output+=parts[0];
+            String[] value = Arrays.copyOfRange(parts, 2, parts.length);
+            String stringVersion = "";
+            for (String s : value) {
+                stringVersion+=" ";
+                stringVersion += s;
+            }
+            if (!ContainsOperator(stringVersion))
+                output+=stringVersion;
+            else{
+                output+=ConvertArithmeticToLISP(stringVersion);
+
+            }
+
+
+
+
+        }
+        else if (parts[0].equals("print>>")){
+            output+=parts[0];
+            String[] subArray = SubStringArray(parts, 1);
+            String stringVersion = "";
+            for (String s : subArray) {
+                stringVersion+=" ";
+                stringVersion += s;
+            }
+            if (!ContainsOperator(stringVersion)){
+                if (subArray.length == 1)
+                    output+=subArray[0];
+                else {
+                    if (!stringVersion.contains("\""))
+                        throw new IllegalArgumentException("Invalid print statement");
+                    for (String s : subArray) {
+                        output += " ";
+                        output += s;
+                    }
+                }
+            }
+            else {
+                output+=ConvertArithmeticToLISP(stringVersion);
+
+            }
+        }
+        else if (parts[0].equals("if") || parts[0].equals("while")){
+            output+=parts[0];
+            output+=" ";
+            String[] subArray = SubStringArray(parts, 1);
+            String stringVersion = "";
+            for (String s : subArray) {
+                stringVersion+=" ";
+                stringVersion += s;
+            }
+            output+=ConvertBooleanToLISP(stringVersion);
+
+        }
+        else if (parts[0].equals("for")){
+            output+="for ( in range ";
+            output+= parts[1];
+            output+=" " + parts[3];
+            output = output.strip();
+            output+=")";
+        }
+        else{
+            String stringVersion = "";
+            for (String s : parts) {
+                stringVersion+=" ";
+                stringVersion += s;
+            }
+            if (!ContainsOperator(stringVersion))
+                output+=stringVersion;
+            else{
+                output+=ConvertArithmeticToLISP(stringVersion);
+
+            }
+
+        }
+        output = output.trim();
+        output+=")";
+        return output;
+    }
+    private Boolean ContainsOperator(String str) {
+        return str.contains("+") || str.contains("-") || str.contains("*") || str.contains("/");
+    }
+    private String[] SubStringArray(String[] arr, int start) {
+        return Arrays.copyOfRange(arr, start, arr.length);
+    }
+    private String Remove(String str, int index){
+        return str.substring(0, index) + str.substring(index + 1);
+    }
+    private String ConvertArithmeticToLISP(String expression) {
+        String output = expression.replaceAll(" ", "");
+        int[] divIndexes = FindAll(output, '/');
+        int[] multIndexes = FindAll(output, '*');
+        int[] addIndexes = FindAll(output, '+');
+        int[] subIndexes = FindAll(output, '-');
+        for (int i = 0; i < divIndexes.length; i++){
+            String part1="";
+            String part2="";
+            if (output.charAt(divIndexes[i]+1) == '('){
+                part2 = output.substring(divIndexes[i]+1);
+                int closingIndex = part2.indexOf(')');
+                part2 = part2.substring(0, closingIndex+1);
+            }
+            else part1 = output.charAt(divIndexes[i]-1) + "";
+            if (output.charAt(divIndexes[i]-1) == '('){
+                part1 = output.substring(0, divIndexes[i]);
+                int openingIndex = part1.lastIndexOf('(');
+                part1 = part1.substring(openingIndex);
+            }
+            else part2 = output.charAt(divIndexes[i]+1) + "";
+            if (part1.equals("") || part2.equals(""))
+                throw new IllegalArgumentException("Invalid expression: " + expression);
+            String subString = part1 + "/" + part2;
+            String replacement = "(/ " + part1 +  " " + part2 + ")";
+            output = output.replaceFirst(subString, replacement);
+
+
+        }
+        for (int i = 0; i < multIndexes.length; i++){
+            String part1="";
+            String part2="";
+            if (output.charAt(multIndexes[i]+1) == '('){
+                part2 = output.substring(multIndexes[i]+1);
+                int closingIndex = part2.indexOf(')');
+                part2 = part2.substring(0, closingIndex+1);
+            }
+            else part1 = output.charAt(multIndexes[i]-1) + "";
+            if (output.charAt(multIndexes[i]-1) == '('){
+                part1 = output.substring(0, multIndexes[i]);
+                int openingIndex = part1.lastIndexOf('(');
+                part1 = part1.substring(openingIndex);
+            }
+            else part2 = output.charAt(multIndexes[i]+1) + "";
+            if (part1.equals("") || part2.equals(""))
+                throw new IllegalArgumentException("Invalid expression: " + expression);
+            String subString = part1 + "*" + part2;
+            String replacement = "(* " + part1 +  " " + part2 + ")";
+            output = output.replaceFirst(subString, replacement);
+            output = Remove(output, multIndexes[i]);
+            output = Remove(output, multIndexes[i]-1);
+
+        }
+        for (int i = 0; i < addIndexes.length; i++){
+            String part1="";
+            String part2="";
+            if (output.charAt(addIndexes[i]+1) == '('){
+                part2 = output.substring(addIndexes[i]+1);
+                int closingIndex = part2.indexOf(')');
+                part2 = part2.substring(0, closingIndex+1);
+            }
+            else part1 = output.charAt(addIndexes[i]-1) + "";
+            if (output.charAt(addIndexes[i]-1) == '('){
+                part1 = output.substring(0, addIndexes[i]);
+                int openingIndex = part1.lastIndexOf('(');
+                part1 = part1.substring(openingIndex);
+            }
+            else part2 = output.charAt(addIndexes[i]+1) + "";
+            if (part1.equals("") || part2.equals(""))
+                throw new IllegalArgumentException("Invalid expression: " + expression);
+            String subString = part1 + "\\+" + part2;
+            String replacement = "(+ " + part1 +  " " + part2 + ")";
+            output = output.replaceFirst(subString, replacement);
+
+        }
+        for (int i = 0; i < subIndexes.length; i++){
+            String part1="";
+            String part2="";
+            if (output.charAt(subIndexes[i]+1) == '('){
+                part2 = output.substring(subIndexes[i]+1);
+                int closingIndex = part2.indexOf(')');
+                part2 = part2.substring(0, closingIndex+1);
+            }
+            else part1 = output.charAt(subIndexes[i]-1) + "";
+            if (output.charAt(subIndexes[i]-1) == '('){
+                part1 = output.substring(0, subIndexes[i]);
+                int openingIndex = part1.lastIndexOf('(');
+                part1 = part1.substring(openingIndex);
+            }
+            else part2 = output.charAt(subIndexes[i]+1) + "";
+            if (part1.equals("") || part2.equals(""))
+                throw new IllegalArgumentException("Invalid expression: " + expression);
+            String subString = part1 + "-" + part2;
+            String replacement = "(- " + part1 +  " " + part2 + ")";
+            output = output.replaceFirst(subString, replacement);
+//            output = Remove(output, subIndexes[i]);
+//            output = Remove(output, subIndexes[i]-1);
+
+        }
+
+        return output;
+
+    }
+    private String ConvertBooleanToLISP(String expression){
+        //All expressions are simple, no brackets ie: a>b, a<b, a>=b, a<=b, a==b, a!=b
+        String output = expression.replaceAll(" ", "");
+        int equalsIndex = output.indexOf("==");
+        int notEqualsIndex = output.indexOf("!=");
+        int lessThanEqualsIndex = output.indexOf("<=");
+        int greaterThanEqualsIndex = output.indexOf(">=");
+        int lessThanIndex = output.indexOf('<');
+        int greaterThanIndex = output.indexOf('>');
+        int[] indexes = {lessThanIndex, greaterThanIndex, equalsIndex, notEqualsIndex, lessThanEqualsIndex, greaterThanEqualsIndex};
+        if (ArrayIsEmpty(indexes))
+            throw new IllegalArgumentException("Invalid boolean expression: " + expression);
+        String operator = "";
+        if (lessThanIndex != -1)
+            operator = "<";
+        else if (greaterThanIndex != -1)
+            operator = ">";
+        else if (equalsIndex != -1)
+            operator = "=";
+        else if (notEqualsIndex != -1)
+            operator = "!=";
+        else if (lessThanEqualsIndex != -1)
+            operator = "<=";
+        else if (greaterThanEqualsIndex != -1)
+            operator = ">=";
+
+        output = output.trim();
+        String newOutput = "( " + operator + " "+  output.substring(0, 1) + " " + output.substring(output.length()-1) + " )";
+        return newOutput;
+
+
+
+
+    }
+    private int[] FindAll(String str,Character c){
+        int[] output = new int[str.length()];
+        int index = 0;
+        for (int i = 0; i < str.length(); i++) {
+            if (str.charAt(i) == c)
+                output[index++] = i;
+        }
+        return Arrays.copyOf(output, index);
+    }
+    private Boolean ArrayIsEmpty(int[] arr){
+        Boolean empty = true;
+        for (int i : arr) {
+            if (i != -1)
+                empty = false;
+        }
+        return empty;
     }
 }

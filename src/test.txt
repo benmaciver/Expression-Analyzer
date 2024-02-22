@@ -1,0 +1,4 @@
+a = 7
+b = 3
+num = a-b
+print>> num
