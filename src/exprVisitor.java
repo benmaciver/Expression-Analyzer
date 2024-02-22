@@ -70,12 +70,6 @@ public interface exprVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitArithmetic(exprParser.ArithmeticContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link exprParser#operation}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitOperation(exprParser.OperationContext ctx);
-	/**
 	 * Visit a parse tree produced by {@link exprParser#value}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

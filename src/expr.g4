@@ -42,14 +42,12 @@ if_statemnt: IF boolean;
 
 for_loop: FOR VARIABLE IN_RANGE (INT | VARIABLE);
 
-assignment: VARIABLE ASSIGN (value | operation | arithmetic | STRING);
+assignment: VARIABLE ASSIGN (value | arithmetic | STRING);
 
-print: PRINT (value | operation | arithmetic | STRING);
+print: PRINT (value | arithmetic | STRING);
 
 boolean: value (EQUAL | NOT_EQUAL | GREATER | LESS | GREATER_EQUAL | LESS_EQUAL) value;
 
-arithmetic: value ((PLUS | MINUS) value)+;
-
-operation: value ((MULTIPLY | DIVIDE) value)+;
+arithmetic: value ((PLUS | MINUS | MULTIPLY | DIVIDE) value)+;
 
 value: FLOAT | INT | VARIABLE;

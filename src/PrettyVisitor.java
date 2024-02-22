@@ -30,8 +30,6 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
             return ctx.VARIABLE().getText() + " = " + visit(ctx.value());
         } else if (ctx.arithmetic() != null) {
             return ctx.VARIABLE().getText() + " = " + visit(ctx.arithmetic());
-        } else if (ctx.operation() != null) {
-            return ctx.VARIABLE().getText() + " = " + visit(ctx.operation());
         } else if (ctx.STRING() != null) {
             return ctx.VARIABLE().getText() + " = " + ctx.STRING().getText();
         } else {
@@ -45,8 +43,6 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
             return "print>> " + visit(ctx.value());
         } else if (ctx.arithmetic() != null) {
             return "print>> " + visit(ctx.arithmetic());
-        } else if (ctx.operation() != null) {
-            return "print>> " + visit(ctx.operation());
         } else if (ctx.STRING() != null) {
             return "print>> " + ctx.STRING().getText();
         } else {
@@ -60,23 +56,13 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         for (int i = 0; i < ctx.value().size(); i++) {
             builder.append(visit(ctx.value(i)));
             if (i < ctx.value().size() - 1) {
-                builder.append(ctx.PLUS() != null ? " + " : " - ");
+                String operator = ctx.getChild(2*i+1).getText();
+                builder.append(" ").append(operator).append(" ");
             }
         }
         return builder.toString();
     }
 
-    @Override
-    public String visitOperation(exprParser.OperationContext ctx) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < ctx.value().size(); i++) {
-            builder.append(visit(ctx.value(i)));
-            if (i < ctx.value().size() - 1) {
-                builder.append(ctx.MULTIPLY() != null ? " * " : " / ");
-            }
-        }
-        return builder.toString();
-    }
 
     @Override
     public String visitValue(exprParser.ValueContext ctx) {

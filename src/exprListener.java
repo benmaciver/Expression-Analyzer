@@ -107,16 +107,6 @@ public interface exprListener extends ParseTreeListener {
 	 */
 	void exitArithmetic(exprParser.ArithmeticContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link exprParser#operation}.
-	 * @param ctx the parse tree
-	 */
-	void enterOperation(exprParser.OperationContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link exprParser#operation}.
-	 * @param ctx the parse tree
-	 */
-	void exitOperation(exprParser.OperationContext ctx);
-	/**
 	 * Enter a parse tree produced by {@link exprParser#value}.
 	 * @param ctx the parse tree
 	 */
