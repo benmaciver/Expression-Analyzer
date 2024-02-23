@@ -10,6 +10,14 @@ public class TestMain {
         tree.insert("Child1", "Grandchild1"); // Insert as first child of Child1
         tree.insert("Child2", "Grandchild2"); // Insert as second child of Child1
 
+
+        BinaryTree tree2 = new BinaryTree();
+        tree2.add("Root2");
+        tree2.insert("Root2", "Child4"); // Insert as first child of Root
+        tree2.insert("Root2", "Child5"); // Insert as second child of Root
+
+        tree.joinTrees(tree2);
+
         System.out.println("Displaying the tree:");
         tree.display();
     }

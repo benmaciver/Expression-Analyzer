@@ -22,14 +22,19 @@ public class BinaryTree {
         insert(node,child);
 
     }
+    public void joinTrees(BinaryTree tree){
+        this.root.addChild(tree.root);
+    }
 
     private Node findNode (String nodeData, Node root) {
-        if (root.data.equals(nodeData)) {
+        if (root == null) return null;
+
+        if ( root.data.equals(nodeData)) {
             return root;
         } else {
             for (int i = 0; i < root.getNumberOfChildren(); i++) {
                 Node foundNode = findNode(nodeData, root.getChild(i));
-                if (foundNode != null) {
+                if (foundNode != null && !foundNode.maxChildren()) {
                     return foundNode;
                 }
             }
@@ -40,17 +45,31 @@ public class BinaryTree {
 
     private void insert(Node node, String data) {
         node.addChild(new Node(data));
+//        System.out.println("Inserted " + data + " as child of " + node.data);
+//        System.out.println("Number of children of " + node.data + " is " + node.getNumberOfChildren());
+    }
+    public Node getNode(String node){
+        return findNode(node,root);
     }
 
     public void display() {
         JFrame frame = new JFrame("Binary Tree");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(500, 500);
-        frame.add(new TreePanel(root));
+
+        // Create a JScrollPane with both horizontal and vertical scrollbars
+        TreePanel panel = new TreePanel(root);
+        JScrollPane scrollPane = new JScrollPane(panel,
+                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        panel.setPreferredSize(new Dimension(20000, 20000));
+        frame.add(scrollPane);
+
+        frame.setSize(500, 500); // Size the frame, not the TreePanel
         frame.setVisible(true);
     }
 
-    private static class Node {
+
+    public static class Node {
         String data;
         Node[] children;
 
@@ -58,19 +77,32 @@ public class BinaryTree {
             this.data = data;
             children = new Node[10];
         }
-        public void addChild(Node child){
+        public Node addChild(Node child){
             for (int i = 0; i < children.length; i++) {
                 if (children[i] == null) {
                     children[i] = child;
-                    break;
+                    return child;
                 }
             }
-            int i = children.length;
+            return null;
+        }
+        public boolean maxChildren(){
+            for (int i = 0; i < children.length; i++) {
+                if (children[i] == null) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public void doubleChildren(){
             children = Arrays.copyOf(children, children.length * 2);
-            children[i] = child;
         }
         public Node getChild(int index){
             return children[index];
+        }
+        public void setNumberOfChildren(int number){
+            children = Arrays.copyOf(children, number);
         }
         public int getNumberOfChildren(){
             int count = 0;
@@ -95,19 +127,23 @@ public class BinaryTree {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            drawTree(g, root, getWidth() / 2, 10);
+            drawTree(g, root, getWidth() / 2, 10,true);
         }
 
-        private void drawTree(Graphics g, Node node, int x, int y) {
+        private void drawTree(Graphics g, Node node, int x, int y,boolean firstRecursion) {
             if (node != null) {
                 int leftX = (x - (int) (Math.abs(Math.pow(node.data.length(), 1.5)))) / 2;
                 int rightX = x + (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2;
 
                 g.drawString(node.data, x - (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2, y);
-
+//                System.out.println(node.getNumberOfChildren());
                 for (int i = 0; i < node.getNumberOfChildren(); i++){
-                    g.drawLine(x, y + 20, x - (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2 + (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / (node.getNumberOfChildren() + 1) * (i + 1), y + 50);
-                    drawTree(g, node.getChild(i), x - (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2 + (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / (node.getNumberOfChildren() + 1) * (i + 1), y + 50);
+                    int a;
+                    if (firstRecursion)
+                        a = 4;
+                    else a = 1;
+                    g.drawLine(x, y + 20, x - (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2 + (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / (node.getNumberOfChildren() + 1) * (((100*i)*a) + 1), y + 100);
+                    drawTree(g, node.getChild(i), x - (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2 + (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / (node.getNumberOfChildren() + 1) * ((100*(i)*a) + 1), y + 100,false);
                 }
 
             }

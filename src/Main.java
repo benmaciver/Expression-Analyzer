@@ -14,6 +14,7 @@ public class Main {
     private static ArrayList<Variable> variables = new ArrayList<>();
     private static Boolean readNextLine;
     private static Boolean lastLineWasIf;
+    private static int forLoops = 0;
     private static Queue<String> parseTreeQueue = new LinkedList<>();
 
     public static void main(String[] args) throws IOException {
@@ -55,8 +56,124 @@ public class Main {
         int i = 1;
         parseTree.add("program");
         while (!parseTreeQueue.isEmpty()) {
+            BinaryTree subTree = new BinaryTree();
+            String line = parseTreeQueue.poll();
+            line = line.strip();
+            String[] splitStr = line.split(" ");
+            subTree.add("statement: " + i);
+            if (splitStr[0].equals("print>>")){
+                subTree.insert(("statement: " + i), "print");
+                subTree.insert("print","PRINT:print>>");
+                splitStr = Arrays.copyOfRange(splitStr, 1, splitStr.length);
+                if (containsOperator(splitStr)){
+                    subTree.insert("print","arithmetic");
+                    insertValue(subTree, "arithmetic", splitStr[0]);
+                    insertOperator(subTree, "arithmetic", splitStr[1]);
+                    insertValue(subTree, "arithmetic", splitStr[2]);
+                }
+                else if (splitStr[0].contains("\""))
+                {
+                    subTree.insert("print","STRING: " + splitStr[0]);
+                }
+                else {
+                    insertValue(subTree, "print", splitStr[0]);
+                }
 
+            }
+            else if (splitStr[1].equals("=")){
+                subTree.insert(("statement: " + i), "assignment");
+                subTree.insert(("assignment"), "VARIABLE: " + splitStr[0]);
+                subTree.insert(("assignment"), "ASSIGN: =");
+                splitStr = Arrays.copyOfRange(splitStr, 2, splitStr.length);
+                if (containsOperator(splitStr)){
+                    subTree.insert("assignment","arithmetic");
+                    insertValue(subTree, "arithmetic", splitStr[0]);
+                    insertOperator(subTree, "arithmetic", splitStr[1]);
+                    insertValue(subTree, "arithmetic", splitStr[2]);
+                }
+                else if (splitStr[0].contains("\""))
+                {
+                    subTree.insert("assignment","STRING: " + splitStr[0]);
+                }
+                else {
+                    insertValue(subTree, "assignment", splitStr[0]);
+                }
+            }
+            else{
+                subTree.insert(("statement: " + i),"control_statement");
+                String controlStatement = null;
+                splitStr[0] = splitStr[0].strip();
+                System.out.println(splitStr[0]);
+                if (splitStr[0].equals("if"))
+                    controlStatement = "if_statement";
+                else if (splitStr[0].equals("while"))
+                    controlStatement = "while_loop";
+                if (controlStatement!=null) {
+                    subTree.insert("control_statement", controlStatement);
+                    subTree.insert(controlStatement, splitStr[0].toUpperCase());
+                    subTree.insert(controlStatement, "boolean");
+                    splitStr = Arrays.copyOfRange(splitStr, 1, splitStr.length);
+                    insertValue(subTree, "boolean", String.valueOf(splitStr[0].charAt(0)));
+                    insertComparisonOperator(subTree, "boolean", String.valueOf(splitStr[0].charAt(1)));
+                    insertValue(subTree, "boolean", String.valueOf(splitStr[0].charAt(2)));
+                }
+                else {
+                    subTree.insert("control_statement","for_loop");
+                    subTree.insert("for_loop", "FOR");
+                    subTree.insert("for_loop", "VARIABLE: " + splitStr[1]);
+                    subTree.insert("for_loop", "IN RANGE: in range");
+                    insertValue(subTree, "for_loop", splitStr[3]);
+                }
+            }
+
+
+
+            parseTree.joinTrees(subTree);
+            i++;
         }
+        parseTree.display();
+    }
+    private static Boolean containsOperator(String[] str){
+        for (String s : str){
+            if (s.equals("+") || s.equals("-") || s.equals("*") || s.equals("/"))
+                return true;
+        }
+        return false;
+    }
+    private static void insertValue(BinaryTree parseTree, String parent, String value){
+        parseTree.insert(parent, "value");
+        if (isInt(value))
+            parseTree.insert("value","INT: " +  value);
+        else if (isFloat(value))
+            parseTree.insert("value","FLOAT: " +  value);
+        else
+            parseTree.insert("value","VARIABLE: " +  value);
+
+        parseTree.getNode("value").setNumberOfChildren(1);
+    }
+    private static void insertOperator(BinaryTree parseTree, String parent, String operator){
+        if (operator.equals("+"))
+            parseTree.insert(parent, "PLUS: " +  operator);
+        else if (operator.equals("-"))
+            parseTree.insert(parent, "MINUS:" +  operator);
+        else if (operator.equals("*"))
+            parseTree.insert(parent, "MULTIPLY: " +  operator);
+        else if (operator.equals("/"))
+            parseTree.insert(parent, "DIVIDE: " + operator);
+    }
+    private static void insertComparisonOperator(BinaryTree parseTree, String parent, String operator){
+        if (operator.equals(">"))
+            parseTree.insert(parent, "GREATER: " +  operator);
+        else if (operator.equals("<"))
+            parseTree.insert(parent, "LESS:" +  operator);
+        else if (operator.equals(">="))
+            parseTree.insert(parent, "GREATER_EQUAL: " +  operator);
+        else if (operator.equals("<="))
+            parseTree.insert(parent, "LESS__EQUAL: " + operator);
+        else if (operator.equals("=="))
+            parseTree.insert(parent, "EQUAL: " + operator);
+        else if (operator.equals("!="))
+            parseTree.insert(parent, "NOT_EQUAL: " + operator);
     }
     private static void ExpressionEvaluator(String str) {
         ArrayList<String> splitStr = new ArrayList<>(Arrays.asList(str.split(" ")));
@@ -89,6 +206,32 @@ public class Main {
             if (!BooleanExpressionEvaluator(expression))
                 readNextLine = false;
             else lastLineWasIf = true;
+        }
+        else if (splitStr.get(0).equals("while")){
+            splitStr.remove(0);
+            String expression = SubstituteVariablesForValues(String.join(" ", splitStr));
+            if (!BooleanExpressionEvaluator(expression))
+                readNextLine = false;
+            else lastLineWasIf = true;
+        }
+        else if (splitStr.get(0).equals("for")){
+            splitStr.remove(0);
+            String varName = splitStr.get(0);
+            int varIndex = getVariable(varName);
+            if (varIndex == -1)
+                throw new IllegalArgumentException("Variable " + varName + " not found");
+            String val = splitStr.get(splitStr.size()-1);
+            if (isInt(val))
+                forLoops = Integer.parseInt(val);
+            else {
+                Variable v = variables.get(varIndex);
+                if (v!=null){
+                    forLoops = v.intValue;
+                }
+                else throw new IllegalArgumentException("Variable " + varName + " not found");
+            }
+
+
         }
         else {
             String varName = splitStr.get(0);
