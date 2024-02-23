@@ -140,7 +140,7 @@ public class BinaryTree {
                 for (int i = 0; i < node.getNumberOfChildren(); i++){
                     int a;
                     if (firstRecursion)
-                        a = 4;
+                        a = 6;
                     else a = 1;
                     g.drawLine(x, y + 20, x - (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2 + (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / (node.getNumberOfChildren() + 1) * (((100*i)*a) + 1), y + 100);
                     drawTree(g, node.getChild(i), x - (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / 2 + (int) (Math.abs(Math.pow(node.data.length(), 1.5))) / (node.getNumberOfChildren() + 1) * ((100*(i)*a) + 1), y + 100,false);

@@ -218,100 +218,90 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         int[] multIndexes = FindAll(output, '*');
         int[] addIndexes = FindAll(output, '+');
         int[] subIndexes = FindAll(output, '-');
-        for (int i = 0; i < divIndexes.length; i++){
+        output = CalculateOutput(addIndexes, '+', output);
+        output = CalculateOutput(subIndexes, '-', output);
+        output = CalculateOutput(multIndexes, '*', output);
+        output = CalculateOutput(divIndexes, '/', output);
+
+
+        return output;
+
+    }
+    private String CalculateOutput(int[] operatorIndexes, Character operator, String input){
+        String output = input;
+
+        for (int i = 0; i < operatorIndexes.length; i++){
             String part1="";
             String part2="";
-            if (output.charAt(divIndexes[i]+1) == '('){
-                part2 = output.substring(divIndexes[i]+1);
+            if (output.charAt(operatorIndexes[i]+1) == '('){
+                part2 = output.substring(operatorIndexes[i]+1);
                 int closingIndex = part2.indexOf(')');
                 part2 = part2.substring(0, closingIndex+1);
             }
-            else part1 = output.charAt(divIndexes[i]-1) + "";
-            if (output.charAt(divIndexes[i]-1) == '('){
-                part1 = output.substring(0, divIndexes[i]);
+//            else part1 = output.charAt(operatorIndexes[i]-1) + "";
+            else{
+                String subString = output.substring(operatorIndexes[i]+1);
+                subString = subString.strip();
+                int decCount=0;
+                for (Character c : subString.toCharArray()) {
+
+
+                    if (c == '.'){
+                        decCount++;
+                        if (decCount > 1)
+                            break;
+                        else {
+                            part2+=c;
+                        }
+
+                    }
+                    else if (!isPunctOrWhitespace(c)) {
+                        part2 += c;
+
+                    }
+                    else break;
+                }
+            }
+            if (output.charAt(operatorIndexes[i]-1) == ')'){
+                part1 = output.substring(0, operatorIndexes[i]-1);
                 int openingIndex = part1.lastIndexOf('(');
                 part1 = part1.substring(openingIndex);
             }
-            else part2 = output.charAt(divIndexes[i]+1) + "";
+            else{
+                String subString = output.substring(0, operatorIndexes[i]);
+                int decCount=0;
+                for (Character c : subString.toCharArray()) {
+
+                    if (c == '.'){
+                        decCount++;
+                        if (decCount > 1)
+                            break;
+                        else {
+                            part1+=c;
+
+                        }
+                    }
+                    else if (!isPunctOrWhitespace(c)) {
+                        part1 += c;
+
+                    }
+                    else break;
+                }
+
+            }
             if (part1.equals("") || part2.equals(""))
-                throw new IllegalArgumentException("Invalid expression: " + expression);
-            String subString = part1 + "/" + part2;
-            String replacement = "(/ " + part1 +  " " + part2 + ")";
-            output = output.replaceFirst(subString, replacement);
+                throw new IllegalArgumentException("Invalid expression");
+            String subString = part1 + operator + part2;
+            String replacement = "(" + operator + " " + part1 +  " " + part2 + ")";
+            output = output.strip();
+            if (output.equals(subString)) {
+                output = replacement;
+            } else {
+                output = output.replaceFirst(subString, replacement);
+            }
 
 
         }
-        for (int i = 0; i < multIndexes.length; i++){
-            String part1="";
-            String part2="";
-            if (output.charAt(multIndexes[i]+1) == '('){
-                part2 = output.substring(multIndexes[i]+1);
-                int closingIndex = part2.indexOf(')');
-                part2 = part2.substring(0, closingIndex+1);
-            }
-            else part1 = output.charAt(multIndexes[i]-1) + "";
-            if (output.charAt(multIndexes[i]-1) == '('){
-                part1 = output.substring(0, multIndexes[i]);
-                int openingIndex = part1.lastIndexOf('(');
-                part1 = part1.substring(openingIndex);
-            }
-            else part2 = output.charAt(multIndexes[i]+1) + "";
-            if (part1.equals("") || part2.equals(""))
-                throw new IllegalArgumentException("Invalid expression: " + expression);
-            String subString = part1 + "*" + part2;
-            String replacement = "(* " + part1 +  " " + part2 + ")";
-            output = output.replaceFirst(subString, replacement);
-            output = Remove(output, multIndexes[i]);
-            output = Remove(output, multIndexes[i]-1);
-
-        }
-        for (int i = 0; i < addIndexes.length; i++){
-            String part1="";
-            String part2="";
-            if (output.charAt(addIndexes[i]+1) == '('){
-                part2 = output.substring(addIndexes[i]+1);
-                int closingIndex = part2.indexOf(')');
-                part2 = part2.substring(0, closingIndex+1);
-            }
-            else part1 = output.charAt(addIndexes[i]-1) + "";
-            if (output.charAt(addIndexes[i]-1) == '('){
-                part1 = output.substring(0, addIndexes[i]);
-                int openingIndex = part1.lastIndexOf('(');
-                part1 = part1.substring(openingIndex);
-            }
-            else part2 = output.charAt(addIndexes[i]+1) + "";
-            if (part1.equals("") || part2.equals(""))
-                throw new IllegalArgumentException("Invalid expression: " + expression);
-            String subString = part1 + "\\+" + part2;
-            String replacement = "(+ " + part1 +  " " + part2 + ")";
-            output = output.replaceFirst(subString, replacement);
-
-        }
-        for (int i = 0; i < subIndexes.length; i++){
-            String part1="";
-            String part2="";
-            if (output.charAt(subIndexes[i]+1) == '('){
-                part2 = output.substring(subIndexes[i]+1);
-                int closingIndex = part2.indexOf(')');
-                part2 = part2.substring(0, closingIndex+1);
-            }
-            else part1 = output.charAt(subIndexes[i]-1) + "";
-            if (output.charAt(subIndexes[i]-1) == '('){
-                part1 = output.substring(0, subIndexes[i]);
-                int openingIndex = part1.lastIndexOf('(');
-                part1 = part1.substring(openingIndex);
-            }
-            else part2 = output.charAt(subIndexes[i]+1) + "";
-            if (part1.equals("") || part2.equals(""))
-                throw new IllegalArgumentException("Invalid expression: " + expression);
-            String subString = part1 + "-" + part2;
-            String replacement = "(- " + part1 +  " " + part2 + ")";
-            output = output.replaceFirst(subString, replacement);
-//            output = Remove(output, subIndexes[i]);
-//            output = Remove(output, subIndexes[i]-1);
-
-        }
-
         return output;
 
     }
@@ -365,5 +355,8 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
                 empty = false;
         }
         return empty;
+    }
+    private Boolean isPunctOrWhitespace(Character c) {
+        return c == ' ' || c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':' || c == '(' || c == ')';
     }
 }

@@ -13,44 +13,176 @@ import java.util.*;
 public class Main {
     private static ArrayList<Variable> variables = new ArrayList<>();
     private static Boolean readNextLine;
-    private static Boolean lastLineWasIf;
+    private static String whileExpression;
     private static int forLoops = 0;
+    private static Variable forVar;
     private static Queue<String> parseTreeQueue = new LinkedList<>();
 
     public static void main(String[] args) throws IOException {
         readNextLine = true;
-        lastLineWasIf = false;
         BufferedReader reader = new BufferedReader(new FileReader("src/test.txt"));
         String line;
         while ((line = reader.readLine()) != null) {
-            line = line.trim();
-            if (line.equals("")) {
-                continue;
+            while (whileExpression!=null){
+                CharStream cs = CharStreams.fromString(line);
+                exprLexer lexer = new exprLexer(cs);
+                CommonTokenStream tokens = new CommonTokenStream(lexer);
+                exprParser parser = new exprParser(tokens);
+                PrettyVisitor pv = new PrettyVisitor();
+                pv.visit(parser.program());
+                String evaluateableCode = pv.GetEvaluateableCode();
+                ExpressionEvaluator(evaluateableCode);
+                if (!BooleanExpressionEvaluator(SubstituteVariablesForValues(whileExpression)))
+                    whileExpression = null;
+            }
+            for (int i = 0; i < forLoops-1; i++){
+
+                CharStream cs = CharStreams.fromString(line);
+                exprLexer lexer = new exprLexer(cs);
+                CommonTokenStream tokens = new CommonTokenStream(lexer);
+                exprParser parser = new exprParser(tokens);
+                PrettyVisitor pv = new PrettyVisitor();
+                pv.visit(parser.program());
+                String evaluateableCode = pv.GetEvaluateableCode();
+
+                ExpressionEvaluator(evaluateableCode);
+                forVar.intValue++;
+            }
+            if (forVar!=null){
+
+                forLoops=0;
             }
 
-            if (line.substring(0,3).equals("    ") && lastLineWasIf)
-                line = line.substring(4);
-            else {
-                lastLineWasIf = false;
-                if (line.substring(0,3).equals("    "))
+
+                if (!readNextLine) {
+                    readNextLine = true;
                     continue;
-            }
+                }
+                line = line.trim();
+                if (line.equals("")) {
+                    continue;
+                }
+
             //System.out.println("Input: " + line);
             CharStream cs = CharStreams.fromString(line);
             exprLexer lexer = new exprLexer(cs);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             exprParser parser = new exprParser(tokens);
-            System.out.println("Executing pretty print");
+            //System.out.println("Executing pretty print");
             PrettyVisitor pv = new PrettyVisitor();
             String LISP = pv.visit(parser.program());
             String evaluateableCode = pv.GetEvaluateableCode();
             System.out.println("Pretty print result: "+  LISP);
-            System.out.println("Evaluating expreesion...");
+            //System.out.println("Evaluating expreesion...");
             ExpressionEvaluator(evaluateableCode);
+
+
             parseTreeQueue.add(evaluateableCode);
+
         }
         displayParseTree();
     }
+    private static void ExpressionEvaluator(String str) {
+        ArrayList<String> splitStr = new ArrayList<>(Arrays.asList(str.split(" ")));
+        if (splitStr.get(0).equals("print>>")) {
+            splitStr.remove(0);
+
+//            for (String s : splitStr)
+//                System.out.println(s);
+            if (splitStr.size() == 1) {
+                int index = getVariable(splitStr.get(0));
+                if (index != -1) {
+                    variables.get(index).printValue();
+                } else {
+                    String output = splitStr.get(0);
+                    output = output.replaceAll("\"", "");
+                    System.out.println(output);
+                }
+            } else {
+                String arithmeticExpression = String.join("", splitStr);
+                arithmeticExpression = SubstituteVariablesForValues(arithmeticExpression);
+                System.out.println(arithmeticExpressionEvaluator(arithmeticExpression));
+            }
+        }
+        else if (splitStr.get(0).equals("if")){
+            //System.out.println(String.valueOf(splitStr));
+            splitStr.remove(0);
+            String expression = SubstituteVariablesForValues(String.join(" ", splitStr));
+            //System.out.println(expression);
+            //System.out.println(String.valueOf(splitStr));
+            if (!BooleanExpressionEvaluator(expression))
+                readNextLine = false;
+        }
+        else if (splitStr.get(0).equals("while")){
+            splitStr.remove(0);
+            String unSubstitutedExpression = String.join(" ", splitStr);
+            String expression = SubstituteVariablesForValues(unSubstitutedExpression);
+            whileExpression = unSubstitutedExpression;
+            if (!BooleanExpressionEvaluator(expression))
+                readNextLine = false;
+        }
+        else if (splitStr.get(0).equals("for")){
+            splitStr.remove(0);
+            String varName = splitStr.get(0);
+            int varIndex = getVariable(varName);
+            if (varIndex != -1)
+                throw new IllegalArgumentException("Variable " + varName + " already defined so cannot be used in for loop");
+            else {
+                Variable var = new Variable(varName, "0");
+                variables.add(var);
+                forVar = var;
+            }
+            String val = splitStr.get(splitStr.size()-1);
+            if (isInt(val))
+                forLoops = Integer.parseInt(val);
+            else {
+                Variable v = variables.get(getVariable(val));
+
+                if (v!=null){
+                    forLoops = v.intValue;
+                }
+                else throw new IllegalArgumentException("Variable " + varName + " not found");
+            }
+
+
+        }
+        else {
+            String varName = splitStr.get(0);
+            Variable var;
+            splitStr.remove(0);
+            splitStr.remove(0);
+            if (splitStr.size() == 1) {
+                if (splitStr.get(0).contains("\"")) {
+                    var = new Variable(varName, splitStr.get(0));
+                } else {
+                    int index = getVariable(splitStr.get(0));
+                    if (index != -1) {
+                        if (variables.get(index).type.equals("int")) {
+                            int value = variables.get(index).intValue;
+                            var = new Variable(varName, Integer.toString(value));
+                        } else {
+                            String value = variables.get(index).strValue;
+                            var = new Variable(varName, value);
+                        }
+                    } else {
+                        String value = splitStr.get(0);
+                        var = new Variable(varName, value);
+                    }
+                }
+            } else {
+                String arithmeticExpression = String.join("", splitStr);
+                arithmeticExpression = SubstituteVariablesForValues(arithmeticExpression);
+                float val = arithmeticExpressionEvaluator(arithmeticExpression);
+                var = new Variable(varName, Float.toString(val));
+            }
+            if (getVariable(varName) != -1) {
+                variables.set(getVariable(varName), var);
+            } else {
+                variables.add(var);
+            }
+        }
+    }
+
     private static void displayParseTree(){
         BinaryTree parseTree = new BinaryTree();
         int i = 1;
@@ -175,100 +307,6 @@ public class Main {
         else if (operator.equals("!="))
             parseTree.insert(parent, "NOT_EQUAL: " + operator);
     }
-    private static void ExpressionEvaluator(String str) {
-        ArrayList<String> splitStr = new ArrayList<>(Arrays.asList(str.split(" ")));
-        if (splitStr.get(0).equals("print>>")) {
-            splitStr.remove(0);
-
-//            for (String s : splitStr)
-//                System.out.println(s);
-            if (splitStr.size() == 1) {
-                int index = getVariable(splitStr.get(0));
-                if (index != -1) {
-                    variables.get(index).printValue();
-                } else {
-                    String output = splitStr.get(0);
-                    output = output.replaceAll("\"", "");
-                    System.out.println(output);
-                }
-            } else {
-                String arithmeticExpression = String.join("", splitStr);
-                arithmeticExpression = SubstituteVariablesForValues(arithmeticExpression);
-                System.out.println(arithmeticExpressionEvaluator(arithmeticExpression));
-            }
-        }
-        else if (splitStr.get(0).equals("if")){
-            //System.out.println(String.valueOf(splitStr));
-            splitStr.remove(0);
-            String expression = SubstituteVariablesForValues(String.join(" ", splitStr));
-            //System.out.println(expression);
-            //System.out.println(String.valueOf(splitStr));
-            if (!BooleanExpressionEvaluator(expression))
-                readNextLine = false;
-            else lastLineWasIf = true;
-        }
-        else if (splitStr.get(0).equals("while")){
-            splitStr.remove(0);
-            String expression = SubstituteVariablesForValues(String.join(" ", splitStr));
-            if (!BooleanExpressionEvaluator(expression))
-                readNextLine = false;
-            else lastLineWasIf = true;
-        }
-        else if (splitStr.get(0).equals("for")){
-            splitStr.remove(0);
-            String varName = splitStr.get(0);
-            int varIndex = getVariable(varName);
-            if (varIndex == -1)
-                throw new IllegalArgumentException("Variable " + varName + " not found");
-            String val = splitStr.get(splitStr.size()-1);
-            if (isInt(val))
-                forLoops = Integer.parseInt(val);
-            else {
-                Variable v = variables.get(varIndex);
-                if (v!=null){
-                    forLoops = v.intValue;
-                }
-                else throw new IllegalArgumentException("Variable " + varName + " not found");
-            }
-
-
-        }
-        else {
-            String varName = splitStr.get(0);
-            Variable var;
-            splitStr.remove(0);
-            splitStr.remove(0);
-            if (splitStr.size() == 1) {
-                if (splitStr.get(0).contains("\"")) {
-                    var = new Variable(varName, splitStr.get(0));
-                } else {
-                    int index = getVariable(splitStr.get(0));
-                    if (index != -1) {
-                        if (variables.get(index).type.equals("int")) {
-                            int value = variables.get(index).intValue;
-                            var = new Variable(varName, Integer.toString(value));
-                        } else {
-                            String value = variables.get(index).strValue;
-                            var = new Variable(varName, value);
-                        }
-                    } else {
-                        String value = splitStr.get(0);
-                        var = new Variable(varName, value);
-                    }
-                }
-            } else {
-                String arithmeticExpression = String.join("", splitStr);
-                arithmeticExpression = SubstituteVariablesForValues(arithmeticExpression);
-                float val = arithmeticExpressionEvaluator(arithmeticExpression);
-                var = new Variable(varName, Float.toString(val));
-            }
-            if (getVariable(varName) != -1) {
-                variables.set(getVariable(varName), var);
-            } else {
-                variables.add(var);
-            }
-        }
-    }
 //    private static ArrayList<String> SubstituteVariablesForValues(ArrayList<String> expression) {
 //        ArrayList<String> output = new ArrayList<>();
 //        for (String s : expression) {
@@ -312,6 +350,7 @@ public class Main {
             b = Float.parseFloat(expression.substring(opIndex + 2));
         }
 
+        //System.out.println("exp: "+  a + " " + expression.charAt(opIndex) + " " + b);
 
         if (expression.charAt(opIndex) == '>' && expression.charAt(opIndex + 1) == '=')
             return a >= b;
@@ -481,6 +520,7 @@ public class Main {
             System.out.println(v.name + " " + v.getValue());
         }
     }
+
 
 
 
