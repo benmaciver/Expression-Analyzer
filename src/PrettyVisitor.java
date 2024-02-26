@@ -2,9 +2,18 @@ import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 import java.util.Arrays;
 
+/**
+ * This class extends the exprBaseVisitor class and overrides its methods to provide
+ * a custom implementation for visiting the nodes of the parse tree.
+ */
 public class PrettyVisitor extends exprBaseVisitor<String> {
     private String evaluateableCode = "";
 
+    /**
+     * Visits the Program node of the parse tree.
+     * @param ctx The context of the Program node.
+     * @return The string representation of the Program node.
+     */
     @Override
     public String visitProgram(exprParser.ProgramContext ctx) {
         StringBuilder builder = new StringBuilder();
@@ -14,9 +23,20 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         evaluateableCode = builder.toString();
         return convertToLISP(builder.toString()).strip();
     }
+
+    /**
+     * Returns the evaluateable code.
+     * @return The evaluateable code.
+     */
     public String GetEvaluateableCode() {
         return evaluateableCode.strip();
     }
+
+    /**
+     * Visits the Statement node of the parse tree.
+     * @param ctx The context of the Statement node.
+     * @return The string representation of the Statement node.
+     */
     @Override
     public String visitStatement(exprParser.StatementContext ctx) {
         if (ctx.assignment() != null) {
@@ -30,6 +50,11 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         }
     }
 
+    /**
+     * Visits the Assignment node of the parse tree.
+     * @param ctx The context of the Assignment node.
+     * @return The string representation of the Assignment node.
+     */
     @Override
     public String visitAssignment(exprParser.AssignmentContext ctx) {
         if (ctx.value() != null) {
@@ -43,6 +68,11 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         }
     }
 
+    /**
+     * Visits the Print node of the parse tree.
+     * @param ctx The context of the Print node.
+     * @return The string representation of the Print node.
+     */
     @Override
     public String visitPrint(exprParser.PrintContext ctx) {
         if (ctx.value() != null) {
@@ -56,6 +86,11 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         }
     }
 
+    /**
+     * Visits the Arithmetic node of the parse tree.
+     * @param ctx The context of the Arithmetic node.
+     * @return The string representation of the Arithmetic node.
+     */
     @Override
     public String visitArithmetic(exprParser.ArithmeticContext ctx) {
         StringBuilder builder = new StringBuilder();
@@ -69,7 +104,11 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         return builder.toString();
     }
 
-
+    /**
+     * Visits the Value node of the parse tree.
+     * @param ctx The context of the Value node.
+     * @return The string representation of the Value node.
+     */
     @Override
     public String visitValue(exprParser.ValueContext ctx) {
         if (ctx.FLOAT() != null) {
@@ -81,6 +120,11 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         }
     }
 
+    /**
+     * Visits the Control_statement node of the parse tree.
+     * @param ctx The context of the Control_statement node.
+     * @return The string representation of the Control_statement node.
+     */
     @Override
     public String visitControl_statement(exprParser.Control_statementContext ctx) {
         if (ctx.while_loop() != null) {
@@ -94,16 +138,31 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         }
     }
 
+    /**
+     * Visits the While_loop node of the parse tree.
+     * @param ctx The context of the While_loop node.
+     * @return The string representation of the While_loop node.
+     */
     @Override
     public String visitWhile_loop(exprParser.While_loopContext ctx) {
         return "while " + ctx.boolean_().getText();
     }
 
+    /**
+     * Visits the If_statemnt node of the parse tree.
+     * @param ctx The context of the If_statemnt node.
+     * @return The string representation of the If_statemnt node.
+     */
     @Override
     public String visitIf_statemnt(exprParser.If_statemntContext ctx) {
         return "if " + ctx.boolean_().getText();
     }
 
+    /**
+     * Visits the For_loop node of the parse tree.
+     * @param ctx The context of the For_loop node.
+     * @return The string representation of the For_loop node.
+     */
     @Override
     public String visitFor_loop(exprParser.For_loopContext ctx) {
         if (ctx.INT() == null) {
@@ -113,10 +172,16 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
 
     }
 
+    /**
+     * Visits the Boolean node of the parse tree.
+     * @param ctx The context of the Boolean node.
+     * @return The string representation of the Boolean node.
+     */
     @Override
     public String visitBoolean(exprParser.BooleanContext ctx) {
         return visit(ctx.value(0)) + " " + ctx.getChild(1).getText() + " " + visit(ctx.value(1));
     }
+    //Converts an expression to list format
     private String convertToLISP(String line){
         String[] parts = line.split(" ");
         String partsMerged = String.join("", parts);
@@ -136,9 +201,6 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
                 output+=ConvertArithmeticToLISP(stringVersion);
 
             }
-
-
-
 
         }
         else if (parts[0].equals("print>>")){
@@ -209,9 +271,7 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
     private String[] SubStringArray(String[] arr, int start) {
         return Arrays.copyOfRange(arr, start, arr.length);
     }
-    private String Remove(String str, int index){
-        return str.substring(0, index) + str.substring(index + 1);
-    }
+    //Takes an arithmetic expression and converts it to LISP format
     private String ConvertArithmeticToLISP(String expression) {
         String output = expression.replaceAll(" ", "");
         int[] divIndexes = FindAll(output, '/');
@@ -227,6 +287,7 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         return output;
 
     }
+    //Helper moethod for ConvertArithmeticToLISP
     private String CalculateOutput(int[] operatorIndexes, Character operator, String input){
         String output = input;
 
@@ -305,6 +366,7 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         return output;
 
     }
+    //Takes a boolean expression and converts it to LISP format
     private String ConvertBooleanToLISP(String expression){
         //All expressions are simple, no brackets ie: a>b, a<b, a>=b, a<=b, a==b, a!=b
         String output = expression.replaceAll(" ", "");
@@ -339,6 +401,7 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
 
 
     }
+    //Finds all occurrences of a character in a string
     private int[] FindAll(String str,Character c){
         int[] output = new int[str.length()];
         int index = 0;
@@ -348,6 +411,7 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         }
         return Arrays.copyOf(output, index);
     }
+    //Checks if an array is empty
     private Boolean ArrayIsEmpty(int[] arr){
         Boolean empty = true;
         for (int i : arr) {
@@ -356,6 +420,7 @@ public class PrettyVisitor extends exprBaseVisitor<String> {
         }
         return empty;
     }
+    //Checks if a character is punctuation or whitespace
     private Boolean isPunctOrWhitespace(Character c) {
         return c == ' ' || c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':' || c == '(' || c == ')';
     }

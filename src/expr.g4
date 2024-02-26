@@ -4,7 +4,6 @@ grammar expr;
 INT: [0-9]+;
 FLOAT: [0-9]+ '.' [0-9]* | '.' [0-9]+;
 STRING: '"' .*? '"';
-//VARIABLE: [a-zA-Z]+; // Adjusted rule for variable names
 PLUS: '+';
 MINUS: '-';
 MULTIPLY: '*';
@@ -21,11 +20,8 @@ GREATER: '>';
 LESS: '<';
 GREATER_EQUAL: '>=';
 LESS_EQUAL: '<=';
-
-
 // Whitespace and newline rules
 WS: [ \t\r\n]+ -> skip;
-
 // Lexer predicate to exclude reserved keywords
 VARIABLE: [a-zA-Z]+ { getText().matches("^(?!if$|while$|for$).*$") };
 

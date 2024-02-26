@@ -1,15 +1,14 @@
 import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.tree.ParseTree;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.*;
 
+/**
+ * The Main class is the entry point of the application.
+ * It reads a file, parses it, and evaluates the expressions in it.
+ */
 public class Main {
     private static ArrayList<Variable> variables = new ArrayList<>();
     private static Boolean readNextLine;
@@ -63,17 +62,16 @@ public class Main {
                     continue;
                 }
 
-            //System.out.println("Input: " + line);
+
             CharStream cs = CharStreams.fromString(line);
             exprLexer lexer = new exprLexer(cs);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             exprParser parser = new exprParser(tokens);
-            //System.out.println("Executing pretty print");
             PrettyVisitor pv = new PrettyVisitor();
             String LISP = pv.visit(parser.program());
             String evaluateableCode = pv.GetEvaluateableCode();
             System.out.println("Pretty print result: "+  LISP);
-            //System.out.println("Evaluating expreesion...");
+            System.out.println("Evaluating expreesion...");
             ExpressionEvaluator(evaluateableCode);
 
 
@@ -82,13 +80,14 @@ public class Main {
         }
         displayParseTree();
     }
+    /**
+     * Evaluates an expression.
+     * @param str The expression to evaluate.
+     */
     private static void ExpressionEvaluator(String str) {
         ArrayList<String> splitStr = new ArrayList<>(Arrays.asList(str.split(" ")));
         if (splitStr.get(0).equals("print>>")) {
             splitStr.remove(0);
-
-//            for (String s : splitStr)
-//                System.out.println(s);
             if (splitStr.size() == 1) {
                 int index = getVariable(splitStr.get(0));
                 if (index != -1) {
@@ -105,11 +104,8 @@ public class Main {
             }
         }
         else if (splitStr.get(0).equals("if")){
-            //System.out.println(String.valueOf(splitStr));
             splitStr.remove(0);
             String expression = SubstituteVariablesForValues(String.join(" ", splitStr));
-            //System.out.println(expression);
-            //System.out.println(String.valueOf(splitStr));
             if (!BooleanExpressionEvaluator(expression))
                 readNextLine = false;
         }
@@ -183,12 +179,15 @@ public class Main {
         }
     }
 
+    /**
+     * Displays the parse tree.
+     */
     private static void displayParseTree(){
-        BinaryTree parseTree = new BinaryTree();
+        Tree parseTree = new Tree();
         int i = 1;
         parseTree.add("program");
         while (!parseTreeQueue.isEmpty()) {
-            BinaryTree subTree = new BinaryTree();
+            Tree subTree = new Tree();
             String line = parseTreeQueue.poll();
             line = line.strip();
             String[] splitStr = line.split(" ");
@@ -235,7 +234,7 @@ public class Main {
                 subTree.insert(("statement: " + i),"control_statement");
                 String controlStatement = null;
                 splitStr[0] = splitStr[0].strip();
-                System.out.println(splitStr[0]);
+
                 if (splitStr[0].equals("if"))
                     controlStatement = "if_statement";
                 else if (splitStr[0].equals("while"))
@@ -265,6 +264,11 @@ public class Main {
         }
         parseTree.display();
     }
+    /**
+     * Checks if a string contains an operator.
+     * @param str The string to check.
+     * @return true if the string contains an operator, false otherwise.
+     */
     private static Boolean containsOperator(String[] str){
         for (String s : str){
             if (s.equals("+") || s.equals("-") || s.equals("*") || s.equals("/"))
@@ -272,7 +276,13 @@ public class Main {
         }
         return false;
     }
-    private static void insertValue(BinaryTree parseTree, String parent, String value){
+    /**
+     * Inserts a value into the parse tree.
+     * @param parseTree The parse tree.
+     * @param parent The parent node.
+     * @param value The value to insert.
+     */
+    private static void insertValue(Tree parseTree, String parent, String value){
         parseTree.insert(parent, "value");
         if (isInt(value))
             parseTree.insert("value","INT: " +  value);
@@ -283,7 +293,13 @@ public class Main {
 
         parseTree.getNode("value").setNumberOfChildren(1);
     }
-    private static void insertOperator(BinaryTree parseTree, String parent, String operator){
+    /**
+     * Inserts an operator into the parse tree.
+     * @param parseTree The parse tree.
+     * @param parent The parent node.
+     * @param operator The operator to insert.
+     */
+    private static void insertOperator(Tree parseTree, String parent, String operator){
         if (operator.equals("+"))
             parseTree.insert(parent, "PLUS: " +  operator);
         else if (operator.equals("-"))
@@ -293,7 +309,13 @@ public class Main {
         else if (operator.equals("/"))
             parseTree.insert(parent, "DIVIDE: " + operator);
     }
-    private static void insertComparisonOperator(BinaryTree parseTree, String parent, String operator){
+    /**
+     * Inserts a comparison operator into the parse tree.
+     * @param parseTree The parse tree.
+     * @param parent The parent node.
+     * @param operator The comparison operator to insert.
+     */
+    private static void insertComparisonOperator(Tree parseTree, String parent, String operator){
         if (operator.equals(">"))
             parseTree.insert(parent, "GREATER: " +  operator);
         else if (operator.equals("<"))
@@ -307,24 +329,22 @@ public class Main {
         else if (operator.equals("!="))
             parseTree.insert(parent, "NOT_EQUAL: " + operator);
     }
-//    private static ArrayList<String> SubstituteVariablesForValues(ArrayList<String> expression) {
-//        ArrayList<String> output = new ArrayList<>();
-//        for (String s : expression) {
-//            if (getVariable(s) != -1) {
-//                output.add(variables.get(getVariable(s)).getValue());
-//            } else
-//                output.add(s);
-//        }
-//
-//        return output;
-//    }
+    /**
+     * Substitutes variables for their values in a string.
+     * @param str The string to substitute.
+     * @return The substituted string.
+     */
     private static String SubstituteVariablesForValues(String str) {
         for (int i = 0; i < variables.size(); i++) {
             str = str.replaceAll(variables.get(i).name, variables.get(i).getValue());
         }
         return str;
     }
-
+    /**
+     * Evaluates a boolean expression.
+     * @param expression The expression to evaluate.
+     * @return The result of the evaluation.
+     */
     private static boolean BooleanExpressionEvaluator(String expression) {
         int opIndex = -1;
         for (int i= 0; i < expression.length(); i++) {
@@ -350,7 +370,6 @@ public class Main {
             b = Float.parseFloat(expression.substring(opIndex + 2));
         }
 
-        //System.out.println("exp: "+  a + " " + expression.charAt(opIndex) + " " + b);
 
         if (expression.charAt(opIndex) == '>' && expression.charAt(opIndex + 1) == '=')
             return a >= b;
@@ -367,6 +386,11 @@ public class Main {
 
         else throw new IllegalArgumentException("Invalid boolean expression: " + expression);
     }
+    /**
+     * Evaluates an arithmetic expression.
+     * @param expression The expression to evaluate.
+     * @return The result of the evaluation.
+     */
     private static float arithmeticExpressionEvaluator(String expression) {
         expression = expression.replaceAll(" ", "");
         Stack<Float> values = new Stack<>();
@@ -400,6 +424,11 @@ public class Main {
         return values.pop();
     }
 
+    /**
+     * Returns the precedence of an operator.
+     * @param op The operator.
+     * @return The precedence of the operator.
+     */
     private static int precedence(char op) {
         switch (op) {
             case '+':
@@ -413,6 +442,13 @@ public class Main {
         }
     }
 
+    /**
+     * Applies an operator to two operands.
+     * @param a The first operand.
+     * @param b The second operand.
+     * @param op The operator.
+     * @return The result of the operation.
+     */
     private static float applyOperator(float a, float b, char op) {
         switch (op) {
             case '+':
@@ -430,6 +466,11 @@ public class Main {
                 throw new IllegalArgumentException("Invalid operator: " + op);
         }
     }
+    /**
+     * Returns the index of a variable in the variables list.
+     * @param str The name of the variable.
+     * @return The index of the variable, or -1 if the variable is not found.
+     */
     private static int getVariable(String str) {
         str = str.strip();
         for (int i = 0; i < variables.size(); i++) {
@@ -471,6 +512,9 @@ public class Main {
         }
 
     }
+    /**
+     * The Variable class represents a variable in the program.
+     */
     private static class Variable {
         public String name;
         public String type;
@@ -479,7 +523,11 @@ public class Main {
         public float floatValue;
 
 
-
+        /**
+         * Constructor for the Variable class.
+         * @param name The name of the variable.
+         * @param value The value of the variable.
+         */
         Variable(String name, String value) {
             this.name = name;
             if (isInt(value)) {
@@ -515,6 +563,9 @@ public class Main {
             return null;
         }
     }
+    /**
+     * Prints all variables.
+     */
     private static void PrintVariables() {
         for (Variable v : variables) {
             System.out.println(v.name + " " + v.getValue());
